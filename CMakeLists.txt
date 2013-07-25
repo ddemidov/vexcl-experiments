@@ -51,3 +51,4 @@ function(add_experiment EXP)
 endfunction()
 
 add_experiment(static_vs_dynamic_reductor)
+add_experiment(slice_reductor_perf)
