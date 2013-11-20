@@ -54,6 +54,7 @@ add_experiment(static_vs_dynamic_reductor)
 add_experiment(slice_reductor_perf)
 add_experiment(sort-by-key-boost-compute)
 add_experiment(sort-by-key-atomic)
+add_experiment(matrix-assembly-cl)
 
 find_package(CUDA)
 set(CUDA_PROPAGATE_HOST_FLAGS OFF)
