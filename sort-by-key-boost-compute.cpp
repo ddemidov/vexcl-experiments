@@ -1,15 +1,16 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <cstdlib>
 
 #include <vexcl/vexcl.hpp>
 #include <boost/compute.hpp>
 
-int main() {
+int main(int argc, char *argv[]) {
     vex::Context ctx( vex::Filter::Env && vex::Filter::Count(1) );
     std::cout << ctx << std::endl;
 
-    const size_t n = 1 << 10;
+    const size_t n = (argc > 1) ? atoi(argv[1]) : (1 << 10);
 
     std::default_random_engine             rng(0);
     std::uniform_int_distribution<int>     irnd(0, 99);
