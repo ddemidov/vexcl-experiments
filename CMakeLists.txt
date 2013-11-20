@@ -15,7 +15,7 @@ endif (VEXCL_SHOW_KERNELS)
 #----------------------------------------------------------------------------
 # Find Boost
 #----------------------------------------------------------------------------
-find_package(Boost COMPONENTS system)
+find_package(Boost COMPONENTS system filesystem)
 
 include_directories( ${Boost_INCLUDE_DIRS} )
 
@@ -52,3 +52,12 @@ endfunction()
 
 add_experiment(static_vs_dynamic_reductor)
 add_experiment(slice_reductor_perf)
+
+find_package(CUDA)
+set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+set(CUDA_NVCC_FLAGS "-arch=sm_13")
+cuda_add_executable(sort-by-key-thrust
+    sort-by-key-thrust.cpp
+    sort-by-key-thrust.cu
+    )
+target_link_libraries(sort-by-key-thrust ${Boost_LIBRARIES} ${CUDA_CUDA_LIBRARY})
