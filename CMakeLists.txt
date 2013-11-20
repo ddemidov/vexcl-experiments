@@ -58,8 +58,15 @@ add_experiment(sort-by-key-atomic)
 find_package(CUDA)
 set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 set(CUDA_NVCC_FLAGS "-arch=sm_13")
+
 cuda_add_executable(sort-by-key-thrust
     sort-by-key-thrust.cpp
     sort-by-key-thrust.cu
     )
 target_link_libraries(sort-by-key-thrust ${Boost_LIBRARIES} ${CUDA_CUDA_LIBRARY})
+
+cuda_add_executable(matrix-assembly-thrust
+    matrix-assembly-thrust.cpp
+    sort-by-key-thrust.cu
+    )
+target_link_libraries(matrix-assembly-thrust ${Boost_LIBRARIES} ${CUDA_CUDA_LIBRARY})

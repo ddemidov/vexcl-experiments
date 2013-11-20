@@ -13,7 +13,7 @@ template <typename Key, typename Val>
 void thrust_sort_by_key(Key *key_begin, Key *key_end, Val *val_begin);
 
 template <typename Key, typename Val>
-std::pair<Key*, Val*> thrust_reduce_by_key(
+Val* thrust_reduce_by_key(
         const Key *key_begin, const Key *key_end, const Val *val_begin,
         Key *key_output, Val *val_output
         );
@@ -62,20 +62,18 @@ int main() {
     double *v_begin = v(0).raw_ptr();
     double *t_begin = t(0).raw_ptr();
 
-    int    *p_end;
-    double *t_end;
 
     prof.tic_cl("Thrust");
     // Sort key-value pairs on the GPU:
     thrust_sort_by_key(k_begin, k_begin + n, v_begin);
 
     // Reduce values on the GPU:
-    std::tie(p_end, t_end) = thrust_reduce_by_key(
+    double *t_end = thrust_reduce_by_key(
             k_begin, k_begin + n, v_begin, p_begin, t_begin);
 
     s = 0;
     vex::permutation(
-            vex::vector<int>(ctx.queue(0), p(0), p_end - p_begin)
+            vex::vector<int>(ctx.queue(0), p(0), t_end - t_begin)
             )(s) = t;
     prof.toc("Thrust");
 
