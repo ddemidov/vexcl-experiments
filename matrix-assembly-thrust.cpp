@@ -29,26 +29,30 @@ int main(int argc, char *argv[]) {
 
     const size_t n = (argc > 1) ? atoi(argv[1]) : (1 << 20); // # of non zeros
     const size_t m = (argc > 2) ? atoi(argv[2]) : n / 4;     // # of grid nodes
+    const int    w = 4;
 
     // Generate matrix in COO format on host.
     std::default_random_engine             rng(0);
-    std::uniform_int_distribution<int>     irnd(0, m - 1);
-    std::uniform_real_distribution<double> drnd(0.0, 1.0);
+    std::uniform_int_distribution<int>     random_row(0, m - 1);
+    std::uniform_int_distribution<int>     random_off(-w, w);
+    std::uniform_real_distribution<double> random_val(0.0, 1.0);
 
     std::vector<int>    row(n);
     std::vector<int>    col(n);
     std::vector<double> val(n);
 
-    std::generate(row.begin(), row.end(), [&]() { return irnd(rng); });
-    std::generate(col.begin(), col.end(), [&]() { return irnd(rng); });
-    std::generate(val.begin(), val.end(), [&]() { return drnd(rng); });
+    for(size_t i = 0; i < n; ++i) {
+        row[i] = random_row(rng);
+        col[i] = row[i] + random_off(rng);
+        val[i] = random_val(rng);
+    }
 
     vex::profiler<> prof(ctx);
 
     // Reduce values on host:
     prof.tic_cpu("CPU");
     Eigen::SparseMatrix<double, Eigen::RowMajor> A(m, m);
-    A.reserve(Eigen::VectorXi::Constant(m, 2 * n / m));
+    A.reserve(Eigen::VectorXi::Constant(m, 2 * w + 1));
 
     for(size_t i = 0; i < val.size(); ++i)
         A.coeffRef(row[i], col[i]) += val[i];
@@ -95,8 +99,9 @@ int main(int argc, char *argv[]) {
 
     double *host_val = A.valuePtr();
     double delta = 0;
+    std::uniform_int_distribution<int> random_idx(0, A.nonZeros() - 1);
     for(size_t i = 0; i < 1024; ++i) {
-        int j = irnd(rng);
+        int j = random_idx(rng);
         delta += fabs(v[j] - host_val[j]);
     }
 
