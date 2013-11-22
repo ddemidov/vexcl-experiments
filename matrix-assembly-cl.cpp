@@ -3,23 +3,7 @@
 #include <random>
 
 #include <eigen3/Eigen/SparseCore>
-
 #include <vexcl/vexcl.hpp>
-
-//---------------------------------------------------------------------------
-// The following templates are defined and instantiated in
-// sort-by-key-thrust.cu
-//---------------------------------------------------------------------------
-template <typename Key1, typename Key2, typename Val>
-void thrust_sort_by_key(
-        Key1 *key1_begin, Key1 *key1_end, Key2 *key2_begin, Val *val_begin);
-
-template <typename Key1, typename Key2, typename Val>
-Val* thrust_reduce_by_key(
-        const Key1 *key1_begin, const Key1 *key1_end, const Key2 *key2_begin,
-        const Val *val_begin,
-        Key1 *key1_output, Key2 *key2_output, Val *val_output
-        );
 
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
