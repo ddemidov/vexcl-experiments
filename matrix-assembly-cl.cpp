@@ -5,7 +5,6 @@
 #include <eigen3/Eigen/SparseCore>
 
 #include <vexcl/vexcl.hpp>
-#include <boost/compute.hpp>
 
 //---------------------------------------------------------------------------
 // The following templates are defined and instantiated in
@@ -47,7 +46,7 @@ int main(int argc, char *argv[]) {
 
     // Reduce values on host:
     prof.tic_cpu("CPU");
-    Eigen::SparseMatrix<double, Eigen::RowMajor> A(n, n);
+    Eigen::SparseMatrix<double, Eigen::RowMajor> A(m, m);
     A.reserve(Eigen::VectorXi::Constant(m, 2 * n / m));
 
     for(size_t i = 0; i < val.size(); ++i)
@@ -62,54 +61,18 @@ int main(int argc, char *argv[]) {
     vex::vector<int>    full_c(ctx, col);
     vex::vector<double> full_v(ctx, val);
 
+    // Get matrix shape from host.
+    vex::vector<int>    r(ctx, m + 1,        A.outerIndexPtr());
+    vex::vector<int>    c(ctx, A.nonZeros(), A.innerIndexPtr());
     prof.toc("Transfer");
 
     prof.tic_cl("GPU");
-    // Get the matrix shape first.
-    vex::vector<int> r(ctx, m + 1);
-    r = 0;
+    // Do the assembling.
+    vex::vector<double> v(ctx, A.nonZeros());
 
-    vex::backend::kernel nnz_per_row( ctx.queue(0),
-            "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
-            "kernel void nnz_per_row(\n"
-            "  ulong n,\n"
-            "  global const int * row,\n"
-            "  global int * nnz\n"
-            ")\n"
-            "{\n"
-            "  for(size_t idx = get_global_id(0); idx < n; idx += get_global_size(0))\n"
-            "    atomic_inc(nnz + row[idx] + 1);\n"
-            "}\n",
-            "nnz_per_row"
-            );
+    v = 0;
 
-    nnz_per_row.push_arg(n);
-    nnz_per_row.push_arg(full_r(0));
-    nnz_per_row.push_arg(r(0));
-
-    nnz_per_row( ctx.queue(0) );
-
-    // Do a partial sum.
-    {
-        boost::compute::command_queue bcq( ctx.queue(0)() );
-        boost::compute::buffer        bcr( r(0).raw() );
-        boost::compute::partial_sum(
-                boost::compute::make_buffer_iterator<int>(bcr, 0),
-                boost::compute::make_buffer_iterator<int>(bcr, m + 1),
-                boost::compute::make_buffer_iterator<int>(bcr, 0),
-                bcq
-                );
-    }
-
-    // Do the actual assembling.
-    size_t nnz = r[m];
-
-    vex::vector<int>    c(ctx, nnz);
-    vex::vector<double> v(ctx, nnz);
-
-    vex::tie(c, v) = std::make_tuple(-1, 0.0);
-
-    vex::backend::kernel assemble( ctx.queue(0),
+    vex::backend::kernel( ctx.queue(0),
             "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
             "#pragma OPENCL EXTENSION cl_khr_int64_base_atomics: enable\n"
             "void AtomicAdd(__global double *val, double delta) {\n"
@@ -132,7 +95,7 @@ int main(int argc, char *argv[]) {
             "  global const int    * J,\n"
             "  global const double * V,\n"
             "  global const int    * R,\n"
-            "  global       int    * col,\n"
+            "  global const int    * C,\n"
             "  global       double * val\n"
             ")\n"
             "{\n"
@@ -140,15 +103,8 @@ int main(int argc, char *argv[]) {
             "    int    i = I[idx];\n"
             "    int    j = J[idx];\n"
             "    double v = V[idx];\n"
-            "    int row_start = R[i];\n"
-            "    int row_end   = R[i+1];\n"
-            "    for(int k = row_start; k < row_end; ++k) {\n"
-            "      int c = col[k];\n"
-            "      if(c < 0) {\n"
-            "        col[k] = j;\n"
-            "        val[k] = v;\n"
-            "        break;\n"
-            "      } else if(c == j) {\n"
+            "    for(int k = R[i], row_end = R[i+1]; k < row_end; ++k) {\n"
+            "      if(C[k] == j) {\n"
             "        AtomicAdd(val + k, v);\n"
             "        break;\n"
             "      }\n"
@@ -156,32 +112,18 @@ int main(int argc, char *argv[]) {
             "  }\n"
             "}\n",
             "assemble"
-            );
+            )(ctx.queue(0), n, full_r(0), full_c(0), full_v(0), r(0), c(0), v(0));
 
-    assemble.push_arg(n);
-    assemble.push_arg(full_r(0));
-    assemble.push_arg(full_c(0));
-    assemble.push_arg(full_v(0));
-    assemble.push_arg(r(0));
-    assemble.push_arg(c(0));
-    assemble.push_arg(v(0));
     prof.toc("GPU");
 
     // Check that we got correct results:
-    std::cout
-        << "Host nnz = " << A.nonZeros()
-        << "; GPU nnz = " << nnz
-        << std::endl;
+    std::cout << "nnz = " << A.nonZeros() << std::endl;
 
-    double *host_val = A.valuePtr();
     double delta = 0;
+    std::uniform_int_distribution<int> crnd(0, A.nonZeros() - 1);
     for(size_t i = 0; i < 1024; ++i) {
-        int    I = irnd(rng);
-        int    p = r[I];
-        int    J = c[p];
-        double V = v[p];
-
-        delta += fabs(V - A.coeffRef(I, J));
+        int    k = crnd(rng);
+        delta += fabs(v[k] - A.valuePtr()[k]);
     }
 
     std::cout

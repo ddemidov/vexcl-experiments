@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
 
     // Reduce values on host:
     prof.tic_cpu("CPU");
-    Eigen::SparseMatrix<double, Eigen::RowMajor> A(n, n);
+    Eigen::SparseMatrix<double, Eigen::RowMajor> A(m, m);
     A.reserve(Eigen::VectorXi::Constant(m, 2 * n / m));
 
     for(size_t i = 0; i < val.size(); ++i)
