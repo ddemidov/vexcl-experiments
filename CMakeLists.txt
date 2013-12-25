@@ -57,6 +57,7 @@ add_experiment(sort-by-key-atomic)
 add_experiment(matrix-assembly-cl)
 add_experiment(matrix-assembly-vexcl)
 add_experiment(vex_sfinae)
+add_experiment(transpose)
 
 find_package(CUDA)
 set(CUDA_PROPAGATE_HOST_FLAGS OFF)
