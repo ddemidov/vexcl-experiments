@@ -12,6 +12,8 @@ int main(int argc, char **argv) {
     vex::Context ctx(vex::Filter::Env);
     std::cout << ctx << std::endl;
 
+    std::cout << "Size: " << n << "x" << m << std::endl;
+
     vex::profiler<> prof(ctx);
 
     vex::vector<double> dst(ctx, m * n);
