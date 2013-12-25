@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
         {
             vex::vector<double> buf(ctx, n * m);
             for(size_t j = 0; j < m; ++j)
-                vex::copy(data[j].begin(), data[j].end(), dst.begin() + j * n);
+                vex::copy(data[j].begin(), data[j].end(), buf.begin() + j * n);
 
             dst = vex::reshape(buf, vex::extents[n][m], vex::extents[1][0]);
         }
