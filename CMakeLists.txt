@@ -58,6 +58,7 @@ add_experiment(matrix-assembly-cl)
 add_experiment(matrix-assembly-vexcl)
 add_experiment(vex_sfinae)
 add_experiment(transpose)
+add_experiment(dot_vs_reshape_n_reduce)
 
 find_package(CUDA)
 set(CUDA_PROPAGATE_HOST_FLAGS OFF)
